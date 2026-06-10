@@ -59,8 +59,8 @@
 </tr>
 <tr>
 <td><img src="docs/screenshots/favorites.png" width="200"/></td>
-<td><img src="docs/screenshots/news_tab.png" width="200"/></td>
-<td><img src="docs/screenshots/article_reader.png" width="200"/></td>
+<td><img src="docs/screenshots/news_tab.jpg" width="200"/></td>
+<td><img src="docs/screenshots/article_reader.jpg" width="200"/></td>
 </tr>
 </table>
 </div>
