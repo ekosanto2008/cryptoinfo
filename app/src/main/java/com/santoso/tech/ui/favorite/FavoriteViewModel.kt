@@ -5,7 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.santoso.tech.data.model.Ticker
 import com.santoso.tech.data.repository.FavoriteRepository
 import com.santoso.tech.data.repository.MarketRepository
-import com.santoso.tech.ui.market.Currency
+import com.santoso.tech.data.repository.Currency
+import com.santoso.tech.data.repository.SettingsRepository
 import com.santoso.tech.ui.market.MarketViewModel
 import com.santoso.tech.websocket.WebSocketManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,7 +25,8 @@ sealed class FavoriteUiState {
 class FavoriteViewModel @Inject constructor(
     private val favoriteRepository: FavoriteRepository,
     private val marketRepository: MarketRepository,
-    private val webSocketManager: WebSocketManager
+    private val webSocketManager: WebSocketManager,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<FavoriteUiState>(FavoriteUiState.Loading)
@@ -32,11 +34,16 @@ class FavoriteViewModel @Inject constructor(
 
     private val _tickers = MutableStateFlow<Map<String, Ticker>>(emptyMap())
     private val _favoriteIds = MutableStateFlow<List<String>>(emptyList())
-    private val _currency = MutableStateFlow(Currency.USD)
 
     init {
         observeFavorites()
         observeWebSocket()
+        
+        viewModelScope.launch {
+            settingsRepository.currencyFlow.collect {
+                emitSuccess()
+            }
+        }
     }
 
     private fun observeFavorites() {
@@ -101,13 +108,15 @@ class FavoriteViewModel @Inject constructor(
         }
         val list = ids.mapNotNull { _tickers.value[it] }
         if (list.isNotEmpty()) {
-            _uiState.value = FavoriteUiState.Success(list, _currency.value)
+            val currency = settingsRepository.currencyFlow.value
+            _uiState.value = FavoriteUiState.Success(list, currency)
         }
     }
 
     fun toggleCurrency() {
-        _currency.value = if (_currency.value == Currency.USD) Currency.IDR else Currency.USD
-        emitSuccess()
+        viewModelScope.launch {
+            settingsRepository.toggleCurrency()
+        }
     }
 
     fun removeFavorite(instId: String) {

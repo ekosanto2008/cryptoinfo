@@ -33,6 +33,10 @@ import com.santoso.tech.ui.market.MarketViewModel
 import com.santoso.tech.ui.theme.CyrptoInfoTheme
 import dagger.hilt.android.AndroidEntryPoint
 
+import com.santoso.tech.data.repository.SettingsRepository
+import com.santoso.tech.data.repository.ThemeMode
+import javax.inject.Inject
+
 // Bottom nav destinations
 sealed class BottomNavItem(val route: String, val label: String) {
     object Market   : BottomNavItem("market",   "Pasar")
@@ -41,12 +45,23 @@ sealed class BottomNavItem(val route: String, val label: String) {
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            CyrptoInfoTheme {
-                Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFF0D1117)) {
+            val themeMode by settingsRepository.themeModeFlow.collectAsState()
+            val isDarkTheme = when (themeMode) {
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+                ThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
+            }
+
+            CyrptoInfoTheme(darkTheme = isDarkTheme) {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     AppNavigation()
                 }
             }
@@ -58,9 +73,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
-    val darkBg = Color(0xFF0D1117)
-    val navBg  = Color(0xFF161B22)
-    val accent = Color(0xFF58A6FF)
+    val bgColor = MaterialTheme.colorScheme.background
+    val navBg  = MaterialTheme.colorScheme.surface
+    val accent = MaterialTheme.colorScheme.primary
 
     // Track current route to know when to show bottom nav
     var currentRoute by remember { mutableStateOf("market") }
@@ -71,7 +86,7 @@ fun AppNavigation() {
     val showBottomBar = currentRoute == "market" || currentRoute == "favorite"
 
     Scaffold(
-        containerColor = darkBg,
+        containerColor = bgColor,
         bottomBar = {
             if (showBottomBar) {
                 NavigationBar(
@@ -114,9 +129,9 @@ fun AppNavigation() {
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = accent,
                                 selectedTextColor = accent,
-                                unselectedIconColor = Color.Gray,
-                                unselectedTextColor = Color.Gray,
-                                indicatorColor = Color(0xFF21262D)
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                indicatorColor = MaterialTheme.colorScheme.surfaceVariant
                             )
                         )
                     }

@@ -29,7 +29,10 @@
 | 🔍 **Search** | Instant search across all trading pairs |
 | 🔄 **Pull-to-Refresh** | Swipe down to refresh market data |
 | 🛡️ **ISP Bypass** | Built-in DNS bypass for regions with internet restrictions |
-| 🌙 **Dark Theme** | Premium dark UI optimized for AMOLED displays |
+| 🌙 **Theme Toggling** | Dynamic Light/Dark mode switching with Material3 Color Scheme |
+| ✨ **Shimmer Loading** | Premium skeleton loading animations while fetching data |
+| 📌 **Sticky Navigation** | Persistent tab selection and headers while scrolling |
+| 🌩️ **Error Handling** | Interactive premium error screens with retry functionality |
 
 ---
 

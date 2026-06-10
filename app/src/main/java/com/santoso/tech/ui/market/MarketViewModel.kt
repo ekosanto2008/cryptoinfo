@@ -13,11 +13,12 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-enum class Currency { USD, IDR }
+import com.santoso.tech.data.repository.Currency
+import com.santoso.tech.data.repository.SettingsRepository
 enum class MarketTab { TOP_LIST, ALL_COIN }
 
-// Approximate IDR/USD exchange rate
-private const val IDR_RATE = 15_900.0
+// Exchange rate will be fetched dynamically
+
 
 sealed class MarketUiState {
     object Loading : MarketUiState()
@@ -25,6 +26,7 @@ sealed class MarketUiState {
         val tickers: List<Ticker>,
         val favorites: List<String>,
         val currency: Currency,
+        val themeMode: com.santoso.tech.data.repository.ThemeMode,
         val tab: MarketTab,
         val totalCount: Int
     ) : MarketUiState()
@@ -35,7 +37,8 @@ sealed class MarketUiState {
 class MarketViewModel @Inject constructor(
     private val repository: MarketRepository,
     private val favoriteRepository: FavoriteRepository,
-    private val webSocketManager: WebSocketManager
+    private val webSocketManager: WebSocketManager,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<MarketUiState>(MarketUiState.Loading)
@@ -47,7 +50,6 @@ class MarketViewModel @Inject constructor(
     private val _currentInstIds = MutableStateFlow<List<String>>(emptyList())
     private val _favorites = MutableStateFlow<List<String>>(emptyList())
     private val _searchQuery = MutableStateFlow("")
-    private val _currency = MutableStateFlow(Currency.USD)
     private val _tab = MutableStateFlow(MarketTab.TOP_LIST)
 
     // Throttle UI updates from WebSocket — collect at most every 500ms
@@ -55,10 +57,50 @@ class MarketViewModel @Inject constructor(
     private var throttleJob: Job? = null
 
     init {
+        fetchRealtimeIdrRate()
+        fetchAllInstrumentsBackground()
         webSocketManager.connect()
         loadTab(MarketTab.TOP_LIST)
         observeFavorites()
+        
+        viewModelScope.launch {
+            settingsRepository.currencyFlow.collect {
+                emitUiNow()
+            }
+        }
         observeWebSocket()
+    }
+
+    private fun fetchAllInstrumentsBackground() {
+        viewModelScope.launch {
+            repository.fetchInstruments("SPOT")
+                .catch { /* ignore */ }
+                .collect { allInstruments ->
+                    val instruments = allInstruments.filter { it.instId.endsWith("-USDT") }
+                    val ids = instruments.map { it.instId }
+                    // Populate placeholder map with all possible instruments
+                    val map = _tickerMap.value.toMutableMap()
+                    ids.forEach { id ->
+                        if (!map.containsKey(id)) {
+                            map[id] = MarketRepository.placeholderTicker(id)
+                        }
+                    }
+                    _tickerMap.value = map
+                }
+        }
+    }
+
+    private fun fetchRealtimeIdrRate() {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val json = java.net.URL("https://api.exchangerate-api.com/v4/latest/USD").readText()
+                val rate = org.json.JSONObject(json).getJSONObject("rates").getDouble("IDR")
+                currentIdrRate = rate
+                emitUiNow()
+            } catch (e: Exception) {
+                // Keep default if fails
+            }
+        }
     }
 
     private fun observeFavorites() {
@@ -117,13 +159,15 @@ class MarketViewModel @Inject constructor(
                     initializeTickerPlaceholders(ids)
                     _currentInstIds.value = ids
                     emitUiNow()
-                    webSocketManager.replaceTickerSubscriptions(ids)
+                    updateWebSocketSubscriptions()
                 }
                 MarketTab.ALL_COIN -> {
                     var loaded = false
                     repository.fetchAll("SPOT")
                         .catch { /* ignore */ }
-                        .collect { tickers ->
+                        .collect { allTickers ->
+                            // Filter only USDT pairs since our price formatting assumes USD base
+                            val tickers = allTickers.filter { it.instId.endsWith("-USDT") }
                             if (tickers.isNotEmpty()) {
                                 loaded = true
                                 val map = _tickerMap.value.toMutableMap()
@@ -131,24 +175,23 @@ class MarketViewModel @Inject constructor(
                                 _tickerMap.value = map
                                 _currentInstIds.value = tickers.map { it.instId }
                                 emitUiNow()
-                                // Only subscribe top 60 to avoid ANR from too many WS updates
-                                val wsIds = tickers.take(60).map { it.instId }
-                                webSocketManager.replaceTickerSubscriptions(wsIds)
+                                updateWebSocketSubscriptions()
                             }
                         }
 
                     if (!loaded) {
                         repository.fetchInstruments("SPOT")
                             .catch { /* ignore */ }
-                            .collect { instruments ->
+                            .collect { allInstruments ->
+                                // Filter only USDT pairs
+                                val instruments = allInstruments.filter { it.instId.endsWith("-USDT") }
                                 if (instruments.isNotEmpty()) {
                                     loaded = true
                                     val ids = instruments.map { it.instId }
                                     initializeTickerPlaceholders(ids)
                                     _currentInstIds.value = ids
                                     emitUiNow()
-                                    val wsIds = ids.take(60)
-                                    webSocketManager.replaceTickerSubscriptions(wsIds)
+                                    updateWebSocketSubscriptions()
                                 }
                             }
                     }
@@ -178,11 +221,33 @@ class MarketViewModel @Inject constructor(
     fun onSearchQueryChange(q: String) {
         _searchQuery.value = q
         emitUiNow()
+        updateWebSocketSubscriptions()
+    }
+
+    fun toggleThemeMode() {
+        settingsRepository.toggleThemeMode()
+    }
+
+    private fun updateWebSocketSubscriptions() {
+        val q = _searchQuery.value.trim()
+        val ids = _currentInstIds.value
+        val map = _tickerMap.value
+
+        val wsIds = if (q.isNotEmpty()) {
+            val searchResults = map.values.filter { 
+                val baseCoin = it.instId.substringBefore("-")
+                baseCoin.contains(q, true) && it.instId.endsWith("-USDT") 
+            }
+            searchResults.sortedByDescending { it.volCcy24h.toDoubleOrNull() ?: 0.0 }.take(60).map { it.instId }
+        } else {
+            ids.take(60)
+        }
+        
+        webSocketManager.replaceTickerSubscriptions(wsIds)
     }
 
     fun toggleCurrency() {
-        _currency.value = if (_currency.value == Currency.USD) Currency.IDR else Currency.USD
-        emitUiNow()
+        settingsRepository.toggleCurrency()
     }
 
     fun fetchTickers() {
@@ -192,26 +257,31 @@ class MarketViewModel @Inject constructor(
     private fun emitUiNow() {
         val map = _tickerMap.value
         val ids = _currentInstIds.value
-        val q = _searchQuery.value
+        val q = _searchQuery.value.trim()
         val f = _favorites.value
         val tab = _tab.value
-        val currency = _currency.value
+        val currency = settingsRepository.currencyFlow.value
+        val theme = settingsRepository.themeModeFlow.value
 
-        val tickers = ids.mapNotNull { map[it] }
-        val filtered = if (q.isEmpty()) tickers else tickers.filter {
-            it.instId.contains(q, true)
+        val tickers = if (q.isNotEmpty()) {
+            map.values.filter { 
+                val baseCoin = it.instId.substringBefore("-")
+                baseCoin.contains(q, true) && it.instId.endsWith("-USDT") 
+            }
+        } else {
+            ids.mapNotNull { map[it] }
         }
 
         // Sort: favorites first; Top List preserves CMC-like order, All Coin by volume (USDT)
-        val sorted = if (tab == MarketTab.TOP_LIST) {
+        val sorted = if (tab == MarketTab.TOP_LIST && q.isEmpty()) {
             // Top List: keep hardcoded order (mirrors CMC market cap ranking)
-            filtered.sortedWith(
+            tickers.sortedWith(
                 compareByDescending<Ticker> { f.contains(it.instId) }
                     .thenBy { ids.indexOf(it.instId) }
             )
         } else {
-            // All Coin: sort by 24h trading volume in USDT (proxy for market cap)
-            filtered.sortedWith(
+            // All Coin or Searching: sort by 24h trading volume in USDT (proxy for market cap)
+            tickers.sortedWith(
                 compareByDescending<Ticker> { f.contains(it.instId) }
                     .thenByDescending { it.volCcy24h.toDoubleOrNull() ?: 0.0 }
             )
@@ -221,6 +291,7 @@ class MarketViewModel @Inject constructor(
             tickers = sorted,
             favorites = f,
             currency = currency,
+            themeMode = theme,
             tab = tab,
             totalCount = tickers.size
         )
@@ -232,16 +303,23 @@ class MarketViewModel @Inject constructor(
     }
 
     companion object {
+        var currentIdrRate = 16_300.0 // Default fallback
+
         fun convertPrice(usdPrice: String, currency: Currency): String {
             val price = usdPrice.toDoubleOrNull() ?: return usdPrice
             if (price == 0.0) return if (currency == Currency.USD) "$0.00" else "Rp 0"
             return when (currency) {
-                Currency.USD -> "$${formatNumber(price)}"
-                Currency.IDR -> "Rp ${formatNumber(price * IDR_RATE)}"
+                Currency.USD -> "$${formatNumber(price, false)}"
+                Currency.IDR -> "Rp ${formatNumber(price * currentIdrRate, true)}"
             }
         }
 
-        fun formatNumber(value: Double): String {
+        fun formatNumber(value: Double, isIdr: Boolean = false): String {
+            if (isIdr) {
+                val format = java.text.NumberFormat.getInstance(java.util.Locale("id", "ID"))
+                format.maximumFractionDigits = 0
+                return format.format(value)
+            }
             return when {
                 value >= 1_000_000_000 -> String.format("%.2fB", value / 1_000_000_000)
                 value >= 1_000_000 -> String.format("%.2fM", value / 1_000_000)

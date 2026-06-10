@@ -26,7 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.santoso.tech.data.model.Ticker
 import com.santoso.tech.ui.common.CoinLogo
-import com.santoso.tech.ui.market.Currency
+import com.santoso.tech.data.repository.Currency
 import com.santoso.tech.ui.market.CurrencyToggle
 import com.santoso.tech.ui.market.MarketViewModel
 
@@ -37,7 +37,7 @@ fun FavoriteScreen(
     onCoinClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val darkBg = Color(0xFF0D1117)
+    val bgColor = MaterialTheme.colorScheme.background
     val accentYellow = Color(0xFFFFC107)
     var isRefreshing by remember { mutableStateOf(false) }
     val pullState = rememberPullToRefreshState()
@@ -47,7 +47,7 @@ fun FavoriteScreen(
     }
 
     Scaffold(
-        containerColor = darkBg,
+        containerColor = bgColor,
         topBar = {
             TopAppBar(
                 title = {
@@ -79,7 +79,10 @@ fun FavoriteScreen(
                         (uiState as FavoriteUiState.Success).currency else Currency.USD
                     CurrencyToggle(current = currency, onToggle = { viewModel.toggleCurrency() })
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = darkBg)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { padding ->
@@ -90,7 +93,7 @@ fun FavoriteScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(darkBg)
+                .background(bgColor)
         ) {
             when (val state = uiState) {
                 is FavoriteUiState.Loading -> {
@@ -173,14 +176,14 @@ fun EmptyFavoriteView() {
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             "Belum Ada Favorit",
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 20.sp,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             "Buka halaman Pasar, tap koin yang diinginkan,\nlalu tekan ★ di pojok kanan atas untuk menambahkan ke favorit.",
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontSize = 13.sp,
             textAlign = TextAlign.Center,
             lineHeight = 20.sp
@@ -207,8 +210,8 @@ fun FavoriteCoinCard(
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
@@ -225,16 +228,16 @@ fun FavoriteCoinCard(
                             ticker.instId.split("-").firstOrNull() ?: ticker.instId,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(Icons.Default.Star, null, tint = Color(0xFFFFC107), modifier = Modifier.size(14.dp))
                     }
-                    Text(ticker.instId, fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(ticker.instId, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
                         "Vol: ${MarketViewModel.formatNumber(ticker.vol24h.toDoubleOrNull() ?: 0.0)}",
                         fontSize = 11.sp,
-                        color = Color(0xFF6E7681)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -246,7 +249,7 @@ fun FavoriteCoinCard(
                         MarketViewModel.convertPrice(ticker.last, currency),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Box(

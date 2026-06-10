@@ -8,6 +8,7 @@ import com.santoso.tech.data.model.Ticker
 import com.santoso.tech.data.repository.CandleRepository
 import com.santoso.tech.data.repository.FavoriteRepository
 import com.santoso.tech.data.repository.MarketRepository
+import com.santoso.tech.data.repository.SettingsRepository
 import com.santoso.tech.websocket.WebSocketManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -32,6 +33,7 @@ class DetailViewModel @Inject constructor(
     private val candleRepository: CandleRepository,
     private val favoriteRepository: FavoriteRepository,
     private val webSocketManager: WebSocketManager,
+    private val settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -39,6 +41,9 @@ class DetailViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<DetailUiState>(DetailUiState.Loading)
     val uiState: StateFlow<DetailUiState> = _uiState.asStateFlow()
+    
+    val currencyFlow = settingsRepository.currencyFlow
+    fun toggleCurrency() = settingsRepository.toggleCurrency()
 
     private var currentTicker: Ticker? = null
     private var isFavorite: Boolean = false
@@ -135,6 +140,12 @@ class DetailViewModel @Inject constructor(
                     subscribeCandleWs(bar)
                 }
         }
+    }
+
+    fun refreshData() {
+        _uiState.value = DetailUiState.Loading
+        fetchTicker()
+        fetchCandles(currentTimeframe)
     }
 
     fun toggleFavorite() {

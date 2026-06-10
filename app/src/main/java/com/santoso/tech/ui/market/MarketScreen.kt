@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Brightness4
+import androidx.compose.material.icons.filled.Brightness7
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
@@ -29,7 +31,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.santoso.tech.data.model.Ticker
+import com.santoso.tech.data.repository.Currency
 import com.santoso.tech.ui.common.CoinLogo
+import com.santoso.tech.ui.common.ErrorScreen
+import com.santoso.tech.ui.common.ShimmerTickerCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,8 +48,8 @@ fun MarketScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     val pullState = rememberPullToRefreshState()
 
-    val darkBg = Color(0xFF0D1117)
-    val accentBlue = Color(0xFF58A6FF)
+    val bgColor = MaterialTheme.colorScheme.background
+    val accentBlue = MaterialTheme.colorScheme.primary
 
     // Reset isRefreshing when data arrives
     LaunchedEffect(uiState) {
@@ -52,7 +57,7 @@ fun MarketScreen(
     }
 
     Scaffold(
-        containerColor = darkBg,
+        containerColor = bgColor,
         topBar = {
             if (isSearching) {
                 SearchTopBar(
@@ -85,6 +90,20 @@ fun MarketScreen(
                         }
                     },
                     actions = {
+                        val isDark = if (uiState is MarketUiState.Success) {
+                            val state = uiState as MarketUiState.Success
+                            state.themeMode == com.santoso.tech.data.repository.ThemeMode.DARK || 
+                            (state.themeMode == com.santoso.tech.data.repository.ThemeMode.SYSTEM && androidx.compose.foundation.isSystemInDarkTheme())
+                        } else true
+                        
+                        IconButton(onClick = { viewModel.toggleThemeMode() }) {
+                            Icon(
+                                imageVector = if (isDark) Icons.Default.Brightness7 else Icons.Default.Brightness4,
+                                contentDescription = "Toggle Theme",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
                         val currency = if (uiState is MarketUiState.Success)
                             (uiState as MarketUiState.Success).currency else Currency.USD
                         CurrencyToggle(
@@ -92,12 +111,12 @@ fun MarketScreen(
                             onToggle = { viewModel.toggleCurrency() }
                         )
                         IconButton(onClick = { isSearching = true }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
+                            Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.onSurface)
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color(0xFF0D1117),
-                        titleContentColor = Color.White
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
             }
@@ -113,18 +132,18 @@ fun MarketScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(darkBg)
+                .background(bgColor)
         ) {
             when (val state = uiState) {
                 is MarketUiState.Loading -> {
-                    Column(
+                    LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        CircularProgressIndicator(color = accentBlue)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("Memuat data pasar...", color = Color.Gray, fontSize = 14.sp)
+                        items(10) {
+                            ShimmerTickerCard()
+                        }
                     }
                 }
                 is MarketUiState.Success -> {
@@ -139,17 +158,10 @@ fun MarketScreen(
                     )
                 }
                 is MarketUiState.Error -> {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text("⚠️", fontSize = 40.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(state.message, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("Tarik ke bawah untuk refresh", color = Color.Gray, fontSize = 12.sp)
-                    }
+                    ErrorScreen(
+                        message = state.message,
+                        onRetry = { viewModel.fetchTickers() }
+                    )
                 }
             }
         }
@@ -191,12 +203,12 @@ fun SearchTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
-            .background(Color(0xFF0D1117))
+            .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onCloseClick) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+            Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onSurface)
         }
         Spacer(modifier = Modifier.width(4.dp))
         TextField(
@@ -208,13 +220,13 @@ fun SearchTopBar(
                 .clip(RoundedCornerShape(24.dp)),
             singleLine = true,
             colors = TextFieldDefaults.colors(
-                focusedContainerColor = Color(0xFF161B22),
-                unfocusedContainerColor = Color(0xFF161B22),
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
                 focusedIndicatorColor = Color.Transparent,
                 unfocusedIndicatorColor = Color.Transparent,
-                cursorColor = Color(0xFF58A6FF)
+                cursorColor = MaterialTheme.colorScheme.primary
             ),
             trailingIcon = {
                 if (query.isNotEmpty()) {
@@ -262,7 +274,7 @@ fun TabChip(
     selectedColor: Color
 ) {
     val bgColor by animateColorAsState(
-        targetValue = if (selected) selectedColor else Color(0xFF21262D),
+        targetValue = if (selected) selectedColor else MaterialTheme.colorScheme.surfaceVariant,
         animationSpec = tween(200), label = "tabBg"
     )
     Box(
@@ -274,7 +286,7 @@ fun TabChip(
     ) {
         Text(
             text = label,
-            color = if (selected) Color.White else Color.Gray,
+            color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             fontSize = 13.sp
         )
@@ -297,42 +309,43 @@ fun MarketList(
     // Reset visible count when tab changes
     LaunchedEffect(tab) { visibleCount = 30 }
 
-    LazyColumn(
-        state = listState,
-        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Tab selector
-        item {
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Sticky Tab selector
+        Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
             TabChips(selectedTab = tab, onTabChange = onTabChange)
         }
 
-        // Info row
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "$totalCount Koin · Tarik untuk refresh",
-                    color = Color.Gray,
-                    fontSize = 12.sp
+        // Sticky Info row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$totalCount Koin · Tarik untuk refresh",
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 12.sp
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF3FB950))
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF3FB950))
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Real-time", color = Color(0xFF3FB950), fontSize = 11.sp)
-                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Real-time", color = Color(0xFF3FB950), fontSize = 11.sp)
             }
         }
+
+        LazyColumn(
+            state = listState,
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f)
+        ) {
 
         val visible = tickers.take(visibleCount)
         items(visible, key = { it.instId }) { ticker ->
@@ -352,13 +365,14 @@ fun MarketList(
                 ) {
                     OutlinedButton(
                         onClick = { visibleCount += 30 },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF58A6FF))
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
                     ) {
                         Text("Muat ${minOf(30, tickers.size - visibleCount)} lagi (${tickers.size - visibleCount} tersisa)")
                     }
                 }
             }
         }
+    }
     }
 }
 
@@ -384,8 +398,8 @@ fun TickerCard(
     Card(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF161B22)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
@@ -401,7 +415,7 @@ fun TickerCard(
                             text = ticker.instId.split("-").firstOrNull() ?: ticker.instId,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         if (isFavorite) {
                             Spacer(modifier = Modifier.width(4.dp))
@@ -413,18 +427,18 @@ fun TickerCard(
                             )
                         }
                     }
-                    Text(text = ticker.instId, fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(text = ticker.instId, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (hasPrice) {
                         Text(
                             text = "Vol: ${MarketViewModel.formatNumber(ticker.vol24h.toDoubleOrNull() ?: 0.0)}",
                             fontSize = 11.sp,
-                            color = Color(0xFF6E7681)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
                         Text(
                             text = "Menunggu data...",
                             fontSize = 11.sp,
-                            color = Color(0xFF6E7681)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -436,7 +450,7 @@ fun TickerCard(
                         text = MarketViewModel.convertPrice(ticker.last, currency),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Box(

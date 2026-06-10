@@ -11,6 +11,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
+import com.santoso.tech.ui.common.ErrorScreen
+import com.santoso.tech.ui.common.ShimmerTickerCard
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -20,12 +22,18 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.santoso.tech.data.model.CandleData
 import com.santoso.tech.data.model.Ticker
+import com.santoso.tech.data.repository.Currency
 import com.santoso.tech.ui.common.CandlestickChart
 import com.santoso.tech.ui.common.CoinLogo
+import com.santoso.tech.ui.market.CurrencyToggle
+import com.santoso.tech.ui.market.MarketViewModel
+import com.santoso.tech.ui.common.ErrorScreen
+import com.santoso.tech.ui.common.ShimmerTickerCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,40 +42,42 @@ fun DetailScreen(
     onBackClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val darkBg = Color(0xFF0D1117)
+    val currency by viewModel.currencyFlow.collectAsState()
+    val bgColor = MaterialTheme.colorScheme.background
 
     Scaffold(
-        containerColor = darkBg,
+        containerColor = bgColor,
         topBar = {
             TopAppBar(
                 title = {
                     val title = if (uiState is DetailUiState.Success)
                         (uiState as DetailUiState.Success).ticker.instId
                     else "Detail Koin"
-                    Text(text = title, color = Color.White, fontWeight = FontWeight.Bold)
+                    Text(text = title, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 actions = {
                     if (uiState is DetailUiState.Success) {
+                        CurrencyToggle(current = currency, onToggle = { viewModel.toggleCurrency() })
                         val isFavorite = (uiState as DetailUiState.Success).isFavorite
                         IconButton(onClick = { viewModel.toggleFavorite() }) {
                             Icon(
                                 imageVector = if (isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
                                 contentDescription = "Favorite",
-                                tint = if (isFavorite) Color(0xFFFFC107) else Color.Gray
+                                tint = if (isFavorite) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = darkBg)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         }
     ) { padding ->
@@ -75,28 +85,38 @@ fun DetailScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .background(darkBg)
+                .background(bgColor)
         ) {
             when (val state = uiState) {
                 is DetailUiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = Color(0xFF58A6FF)
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        ShimmerTickerCard()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(300.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        )
+                    }
                 }
                 is DetailUiState.Success -> {
                     TickerDetail(
                         ticker = state.ticker,
+                        currency = currency,
                         candles = state.candles,
                         selectedTimeframe = state.selectedTimeframe,
                         onTimeframeChange = { viewModel.fetchCandles(it) }
                     )
                 }
                 is DetailUiState.Error -> {
-                    Text(
-                        text = state.message,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.align(Alignment.Center).padding(16.dp)
+                    ErrorScreen(
+                        message = state.message,
+                        onRetry = { viewModel.refreshData() }
                     )
                 }
             }
@@ -107,6 +127,7 @@ fun DetailScreen(
 @Composable
 fun TickerDetail(
     ticker: Ticker,
+    currency: Currency,
     candles: List<CandleData>,
     selectedTimeframe: String,
     onTimeframeChange: (String) -> Unit
@@ -119,7 +140,7 @@ fun TickerDetail(
     val isPositive = changePercent >= 0
     val changeColor = if (isPositive) Color(0xFF00C853) else Color(0xFFD32F2F)
 
-    val cardColor = Color(0xFF161B22)
+    val cardColor = MaterialTheme.colorScheme.surface
 
     Column(
         modifier = Modifier
@@ -132,7 +153,7 @@ fun TickerDetail(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = cardColor),
             shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(4.dp)
+            elevation = CardDefaults.cardElevation(2.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(
@@ -146,12 +167,12 @@ fun TickerDetail(
                             text = ticker.instId,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = baseCoin.uppercase(),
                             fontSize = 13.sp,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -162,10 +183,10 @@ fun TickerDetail(
 
                 // Price
                 Text(
-                    text = "$${ticker.last}",
+                    text = MarketViewModel.convertPrice(ticker.last, currency),
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -193,24 +214,24 @@ fun TickerDetail(
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     "Statistik 24 Jam",
-                    color = Color(0xFF58A6FF),
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    StatItem("Tertinggi", ticker.high24h, Modifier.weight(1f))
-                    StatItem("Terendah", ticker.low24h, Modifier.weight(1f))
+                    StatItem("Tertinggi", MarketViewModel.convertPrice(ticker.high24h, currency), Modifier.weight(1f))
+                    StatItem("Terendah", MarketViewModel.convertPrice(ticker.low24h, currency), Modifier.weight(1f))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    StatItem("Volume (koin)", ticker.vol24h, Modifier.weight(1f))
-                    StatItem("Volume (quote)", ticker.volCcy24h, Modifier.weight(1f))
+                    StatItem("Volume (koin)", MarketViewModel.formatNumber(ticker.vol24h.toDoubleOrNull() ?: 0.0), Modifier.weight(1f))
+                    StatItem("Volume (quote)", MarketViewModel.formatNumber(ticker.volCcy24h.toDoubleOrNull() ?: 0.0), Modifier.weight(1f))
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    StatItem("Bid", ticker.bidPx, Modifier.weight(1f))
-                    StatItem("Ask", ticker.askPx, Modifier.weight(1f))
+                    StatItem("Bid", MarketViewModel.convertPrice(ticker.bidPx, currency), Modifier.weight(1f))
+                    StatItem("Ask", MarketViewModel.convertPrice(ticker.askPx, currency), Modifier.weight(1f))
                 }
             }
         }
@@ -232,7 +253,7 @@ fun TickerDetail(
                 ) {
                     Text(
                         "Candlestick Chart",
-                        color = Color(0xFF58A6FF),
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp
                     )
@@ -252,12 +273,12 @@ fun TickerDetail(
                                 Text(
                                     tf,
                                     fontSize = 11.sp,
-                                    color = if (isSelected) Color.White else Color.Gray
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFF58A6FF),
-                                containerColor = Color(0xFF21262D)
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
                             ),
                             modifier = Modifier.height(32.dp)
                         )
@@ -282,7 +303,7 @@ fun TickerDetail(
 @Composable
 fun StatItem(label: String, value: String, modifier: Modifier = Modifier) {
     Column(modifier = modifier.padding(end = 8.dp)) {
-        Text(label, color = Color.Gray, fontSize = 11.sp)
-        Text(value, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 11.sp)
+        Text(value, color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
