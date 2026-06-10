@@ -112,3 +112,45 @@ fun ShimmerTickerCard() {
         }
     }
 }
+
+@Composable
+fun ShimmerNewsCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column {
+            // Thumbnail placeholder
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
+                    .shimmerEffect()
+            )
+            Column(modifier = Modifier.padding(12.dp)) {
+                // Source + time row
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.height(16.dp).width(60.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+                    Box(Modifier.height(16.dp).width(80.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+                }
+                Spacer(Modifier.height(8.dp))
+                // Title line 1
+                Box(Modifier.fillMaxWidth().height(14.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+                Spacer(Modifier.height(6.dp))
+                // Title line 2
+                Box(Modifier.fillMaxWidth(0.75f).height(14.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+                Spacer(Modifier.height(8.dp))
+                // Description
+                Box(Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+                Spacer(Modifier.height(4.dp))
+                Box(Modifier.fillMaxWidth(0.6f).height(12.dp).clip(RoundedCornerShape(4.dp)).shimmerEffect())
+                Spacer(Modifier.height(10.dp))
+                // Read more button
+                Box(Modifier.width(130.dp).height(28.dp).clip(RoundedCornerShape(8.dp)).shimmerEffect())
+            }
+        }
+    }
+}

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.santoso.tech.data.local.AppDatabase
 import com.santoso.tech.data.local.dao.FavoriteDao
+import com.santoso.tech.data.local.dao.NewsBookmarkDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,11 +23,18 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             "crypto_info_db"
-        ).build()
+        )
+            .addMigrations(AppDatabase.MIGRATION_1_2)
+            .build()
     }
 
     @Provides
     fun provideFavoriteDao(database: AppDatabase): FavoriteDao {
         return database.favoriteDao()
+    }
+
+    @Provides
+    fun provideNewsBookmarkDao(database: AppDatabase): NewsBookmarkDao {
+        return database.newsBookmarkDao()
     }
 }

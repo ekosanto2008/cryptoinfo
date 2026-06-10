@@ -15,7 +15,7 @@ import javax.inject.Inject
 
 import com.santoso.tech.data.repository.Currency
 import com.santoso.tech.data.repository.SettingsRepository
-enum class MarketTab { TOP_LIST, ALL_COIN }
+enum class MarketTab { TOP_LIST, ALL_COIN, NEWS }
 
 // Exchange rate will be fetched dynamically
 
@@ -203,6 +203,17 @@ class MarketViewModel @Inject constructor(
                         emitUiNow()
                         webSocketManager.replaceTickerSubscriptions(ids)
                     }
+                }
+                MarketTab.NEWS -> {
+                    // News is handled separately by NewsScreen/NewsViewModel
+                    _uiState.value = MarketUiState.Success(
+                        tickers = emptyList(),
+                        favorites = _favorites.value,
+                        currency = settingsRepository.currencyFlow.first(),
+                        themeMode = settingsRepository.themeModeFlow.first(),
+                        tab = MarketTab.NEWS,
+                        totalCount = 0
+                    )
                 }
             }
         }

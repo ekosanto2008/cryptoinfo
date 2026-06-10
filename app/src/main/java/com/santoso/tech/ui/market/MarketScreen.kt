@@ -35,6 +35,7 @@ import com.santoso.tech.data.repository.Currency
 import com.santoso.tech.ui.common.CoinLogo
 import com.santoso.tech.ui.common.ErrorScreen
 import com.santoso.tech.ui.common.ShimmerTickerCard
+import com.santoso.tech.ui.news.NewsScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -263,6 +264,12 @@ fun TabChips(
             onClick = { onTabChange(MarketTab.ALL_COIN) },
             selectedColor = accentBlue
         )
+        TabChip(
+            label = "📰 News",
+            selected = selectedTab == MarketTab.NEWS,
+            onClick = { onTabChange(MarketTab.NEWS) },
+            selectedColor = accentBlue
+        )
     }
 }
 
@@ -315,66 +322,70 @@ fun MarketList(
             TabChips(selectedTab = tab, onTabChange = onTabChange)
         }
 
-        // Sticky Info row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "$totalCount Koin · Tarik untuk refresh",
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF3FB950))
+        if (tab == MarketTab.NEWS) {
+            // News tab — delegate to NewsScreen
+            NewsScreen()
+        } else {
+            // Sticky Info row for coin tabs
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "$totalCount Koin · Tarik untuk refresh",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp
                 )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Real-time", color = Color(0xFF3FB950), fontSize = 11.sp)
-            }
-        }
-
-        LazyColumn(
-            state = listState,
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.weight(1f)
-        ) {
-
-        val visible = tickers.take(visibleCount)
-        items(visible, key = { it.instId }) { ticker ->
-            TickerCard(
-                ticker = ticker,
-                isFavorite = favorites.contains(ticker.instId),
-                currency = currency,
-                onClick = { onPairClick(ticker.instId) }
-            )
-        }
-
-        if (visibleCount < tickers.size) {
-            item {
-                Box(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    OutlinedButton(
-                        onClick = { visibleCount += 30 },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                    ) {
-                        Text("Muat ${minOf(30, tickers.size - visibleCount)} lagi (${tickers.size - visibleCount} tersisa)")
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF3FB950))
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Real-time", color = Color(0xFF3FB950), fontSize = 11.sp)
                 }
             }
-        }
-    }
-    }
-}
+
+            LazyColumn(
+                state = listState,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                val visible = tickers.take(visibleCount)
+                items(visible, key = { it.instId }) { ticker ->
+                    TickerCard(
+                        ticker = ticker,
+                        isFavorite = favorites.contains(ticker.instId),
+                        currency = currency,
+                        onClick = { onPairClick(ticker.instId) }
+                    )
+                }
+
+                if (visibleCount < tickers.size) {
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            OutlinedButton(
+                                onClick = { visibleCount += 30 },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
+                            ) {
+                                Text("Muat ${minOf(30, tickers.size - visibleCount)} lagi (${tickers.size - visibleCount} tersisa)")
+                            }
+                        }
+                    }
+                }
+            }  // end LazyColumn
+        }  // end else (non-News tabs)
+    }  // end Column
+}  // end MarketList
 
 @Composable
 fun TickerCard(

@@ -19,6 +19,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // News API keys — set values in local.properties (never commit keys)
+        val properties = com.android.build.gradle.internal.cxx.configure.gradleLocalProperties(rootDir, providers)
+        buildConfigField("String", "NEWS_API_KEY", "\"${properties.getProperty("NEWS_API_KEY", "")}\"")
+        buildConfigField("String", "GNEWS_API_KEY", "\"${properties.getProperty("GNEWS_API_KEY", "")}\"")
+        buildConfigField("String", "CRYPTOCOMPARE_API_KEY", "\"${properties.getProperty("CRYPTOCOMPARE_API_KEY", "")}\"")
     }
 
     buildTypes {
@@ -40,6 +46,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -86,6 +93,9 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+
+    // Chrome Custom Tabs
+    implementation("androidx.browser:browser:1.8.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
