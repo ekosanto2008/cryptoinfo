@@ -22,9 +22,11 @@ android {
 
         // News API keys — set values in local.properties (never commit keys)
         val properties = com.android.build.gradle.internal.cxx.configure.gradleLocalProperties(rootDir, providers)
-        buildConfigField("String", "NEWS_API_KEY", "\"${properties.getProperty("NEWS_API_KEY", "")}\"")
-        buildConfigField("String", "GNEWS_API_KEY", "\"${properties.getProperty("GNEWS_API_KEY", "")}\"")
-        buildConfigField("String", "CRYPTOCOMPARE_API_KEY", "\"${properties.getProperty("CRYPTOCOMPARE_API_KEY", "")}\"")
+        buildConfigField("String", "NEWS_API_KEY",       "\"${properties.getProperty("NEWS_API_KEY", "")}\"")
+        buildConfigField("String", "GNEWS_API_KEY",      "\"${properties.getProperty("GNEWS_API_KEY", "")}\"")
+        buildConfigField("String", "NEWSDATA_API_KEY",   "\"${properties.getProperty("NEWSDATA_API_KEY", "")}\"")
+        buildConfigField("String", "MEDIASTACK_API_KEY", "\"${properties.getProperty("MEDIASTACK_API_KEY", "")}\"")
+        buildConfigField("String", "COINDESK_API_KEY",   "\"${properties.getProperty("COINDESK_API_KEY", "")}\"")
     }
 
     buildTypes {

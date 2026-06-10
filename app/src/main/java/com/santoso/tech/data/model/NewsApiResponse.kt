@@ -49,3 +49,40 @@ data class GNewsArticle(
 data class GNewsSource(
     @SerialName("name") val name: String = ""
 )
+
+// ─── NewsData.io response ─────────────────────────────────────────────────────
+
+@Serializable
+data class NewsDataResponse(
+    @SerialName("status") val status: String = "",
+    @SerialName("totalResults") val totalResults: Int = 0,
+    @SerialName("results") val results: List<NewsDataArticle> = emptyList()
+)
+
+@Serializable
+data class NewsDataArticle(
+    @SerialName("title") val title: String = "",
+    @SerialName("description") val description: String? = null,
+    @SerialName("link") val link: String = "",
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("pubDate") val pubDate: String = "",
+    @SerialName("source_id") val sourceId: String = "",
+    @SerialName("source_name") val sourceName: String? = null
+)
+
+// ─── MediaStack response ──────────────────────────────────────────────────────
+
+@Serializable
+data class MediaStackResponse(
+    @SerialName("data") val data: List<MediaStackArticle> = emptyList()
+)
+
+@Serializable
+data class MediaStackArticle(
+    @SerialName("title") val title: String = "",
+    @SerialName("description") val description: String? = null,
+    @SerialName("url") val url: String = "",
+    @SerialName("image") val image: String? = null,
+    @SerialName("published_at") val publishedAt: String = "",
+    @SerialName("source") val source: String = ""
+)
