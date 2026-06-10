@@ -30,6 +30,7 @@ import com.santoso.tech.ui.favorite.FavoriteScreen
 import com.santoso.tech.ui.favorite.FavoriteViewModel
 import com.santoso.tech.ui.market.MarketScreen
 import com.santoso.tech.ui.market.MarketViewModel
+import com.santoso.tech.ui.news.ArticleReaderScreen
 import com.santoso.tech.ui.theme.CyrptoInfoTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -150,6 +151,10 @@ fun AppNavigation() {
                     viewModel = viewModel,
                     onPairClick = { instId ->
                         navController.navigate("detail/$instId")
+                    },
+                    onArticleClick = { url ->
+                        val encoded = java.net.URLEncoder.encode(url, "UTF-8")
+                        navController.navigate("article/$encoded")
                     }
                 )
             }
@@ -171,6 +176,18 @@ fun AppNavigation() {
                 val viewModel: DetailViewModel = hiltViewModel()
                 DetailScreen(
                     viewModel = viewModel,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = "article/{encodedUrl}",
+                arguments = listOf(navArgument("encodedUrl") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val encodedUrl = backStackEntry.arguments?.getString("encodedUrl") ?: ""
+                val articleUrl = java.net.URLDecoder.decode(encodedUrl, "UTF-8")
+                ArticleReaderScreen(
+                    url = articleUrl,
                     onBackClick = { navController.popBackStack() }
                 )
             }

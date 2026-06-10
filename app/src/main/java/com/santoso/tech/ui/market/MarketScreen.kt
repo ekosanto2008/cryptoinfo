@@ -41,7 +41,8 @@ import com.santoso.tech.ui.news.NewsScreen
 @Composable
 fun MarketScreen(
     viewModel: MarketViewModel,
-    onPairClick: (String) -> Unit
+    onPairClick: (String) -> Unit,
+    onArticleClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var isSearching by remember { mutableStateOf(false) }
@@ -155,7 +156,8 @@ fun MarketScreen(
                         tab = state.tab,
                         totalCount = state.totalCount,
                         onPairClick = onPairClick,
-                        onTabChange = { viewModel.switchTab(it) }
+                        onTabChange = { viewModel.switchTab(it) },
+                        onArticleClick = onArticleClick
                     )
                 }
                 is MarketUiState.Error -> {
@@ -308,7 +310,8 @@ fun MarketList(
     tab: MarketTab,
     totalCount: Int,
     onPairClick: (String) -> Unit,
-    onTabChange: (MarketTab) -> Unit
+    onTabChange: (MarketTab) -> Unit,
+    onArticleClick: (String) -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     var visibleCount by remember { mutableStateOf(30) }
@@ -324,7 +327,7 @@ fun MarketList(
 
         if (tab == MarketTab.NEWS) {
             // News tab — delegate to NewsScreen
-            NewsScreen()
+            NewsScreen(onArticleClick = onArticleClick)
         } else {
             // Sticky Info row for coin tabs
             Row(

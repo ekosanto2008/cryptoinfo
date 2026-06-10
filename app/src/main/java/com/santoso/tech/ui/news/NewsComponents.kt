@@ -1,10 +1,5 @@
 package com.santoso.tech.ui.news
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import androidx.browser.customtabs.CustomTabColorSchemeParams
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -16,16 +11,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -99,15 +91,13 @@ fun NewsCard(
     article: NewsArticle,
     isBookmarked: Boolean,
     onBookmarkToggle: () -> Unit,
+    onArticleClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
-    val primaryColor = MaterialTheme.colorScheme.primary
-
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { openArticle(context, article.url, primaryColor.toArgb()) },
+            .clickable { onArticleClick(article.url) },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -137,7 +127,7 @@ fun NewsCard(
             }
 
             Column(modifier = Modifier.padding(12.dp)) {
-                // Source + Category + Time row
+                // Source + Time + Bookmark
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -214,14 +204,14 @@ fun NewsCard(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .clickable { openArticle(context, article.url, primaryColor.toArgb()) }
+                        .clickable { onArticleClick(article.url) }
                         .background(MaterialTheme.colorScheme.primaryContainer)
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(
-                        Icons.Filled.OpenInNew,
+                        Icons.Filled.MenuBook,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
@@ -235,28 +225,6 @@ fun NewsCard(
                 }
             }
         }
-    }
-}
-
-// ─── Open article with Chrome Custom Tabs ────────────────────────────────────
-
-fun openArticle(context: Context, url: String, toolbarColor: Int) {
-    try {
-        val colorParams = CustomTabColorSchemeParams.Builder()
-            .setToolbarColor(toolbarColor)
-            .build()
-        val customTabsIntent = CustomTabsIntent.Builder()
-            .setDefaultColorSchemeParams(colorParams)
-            .setShowTitle(true)
-            .setUrlBarHidingEnabled(true)
-            .build()
-        customTabsIntent.launchUrl(context, Uri.parse(url))
-    } catch (e: Exception) {
-        // Fallback: open with default browser
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            context.startActivity(intent)
-        } catch (e2: Exception) { /* ignore */ }
     }
 }
 

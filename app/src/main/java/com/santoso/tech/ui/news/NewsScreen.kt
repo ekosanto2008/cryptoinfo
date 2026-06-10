@@ -27,7 +27,8 @@ import com.santoso.tech.ui.common.ShimmerNewsCard
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewsScreen(
-    viewModel: NewsViewModel = hiltViewModel()
+    viewModel: NewsViewModel = hiltViewModel(),
+    onArticleClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val selectedCategory by viewModel.selectedCategory.collectAsState()
@@ -97,7 +98,6 @@ fun NewsScreen(
         ) {
             when (val state = uiState) {
                 is NewsUiState.Loading -> {
-                    // Shimmer loading
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -124,7 +124,8 @@ fun NewsScreen(
                             NewsCard(
                                 article = article,
                                 isBookmarked = article.url in bookmarkedUrls,
-                                onBookmarkToggle = { viewModel.toggleBookmark(article) }
+                                onBookmarkToggle = { viewModel.toggleBookmark(article) },
+                                onArticleClick = onArticleClick
                             )
                         }
                         item { Spacer(Modifier.height(16.dp)) }
