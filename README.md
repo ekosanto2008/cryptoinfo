@@ -21,6 +21,8 @@
 | Feature | Description |
 |---------|-------------|
 | 📊 **Real-Time Prices** | Live WebSocket-powered ticker updates every second |
+| 📰 **Crypto News** | Multi-source news aggregation (CoinDesk, NewsAPI, GNews, etc.) |
+| 📖 **In-App Reader** | Modern WebView reader with progress bar, share, and back nav |
 | 🔥 **Top List** | Top 60 coins ranked by market capitalization |
 | 📈 **All Coins** | Browse 1200+ SPOT trading pairs sorted by volume |
 | 🕯️ **Candlestick Charts** | Interactive charts with 5 timeframes (15m, 1H, 4H, 1D, 1W) |
@@ -44,13 +46,21 @@
 <td align="center"><b>Top List</b></td>
 <td align="center"><b>All Coins</b></td>
 <td align="center"><b>Detail & Chart</b></td>
-<td align="center"><b>Favorites</b></td>
 </tr>
 <tr>
 <td><img src="docs/screenshots/top_list.png" width="200"/></td>
 <td><img src="docs/screenshots/all_coins.png" width="200"/></td>
 <td><img src="docs/screenshots/detail.png" width="200"/></td>
+</tr>
+<tr>
+<td align="center"><b>Favorites</b></td>
+<td align="center"><b>News Tab</b></td>
+<td align="center"><b>Article Reader</b></td>
+</tr>
+<tr>
 <td><img src="docs/screenshots/favorites.png" width="200"/></td>
+<td><img src="docs/screenshots/news_tab.png" width="200"/></td>
+<td><img src="docs/screenshots/article_reader.png" width="200"/></td>
 </tr>
 </table>
 </div>
