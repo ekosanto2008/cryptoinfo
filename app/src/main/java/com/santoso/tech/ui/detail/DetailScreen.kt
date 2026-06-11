@@ -13,6 +13,10 @@ import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
 import com.santoso.tech.ui.common.ErrorScreen
 import com.santoso.tech.ui.common.ShimmerTickerCard
+import android.annotation.SuppressLint
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -108,9 +112,10 @@ fun DetailScreen(
                     TickerDetail(
                         ticker = state.ticker,
                         currency = currency,
-                        candles = state.candles,
+                        candlesJson = state.candlesJson,
+                        latestCandleJson = state.latestCandleJson,
                         selectedTimeframe = state.selectedTimeframe,
-                        onTimeframeChange = { viewModel.fetchCandles(it) }
+                        onTimeframeChange = { viewModel.fetchChartData(it) }
                     )
                 }
                 is DetailUiState.Error -> {
@@ -128,7 +133,8 @@ fun DetailScreen(
 fun TickerDetail(
     ticker: Ticker,
     currency: Currency,
-    candles: List<CandleData>,
+    candlesJson: String?,
+    latestCandleJson: String?,
     selectedTimeframe: String,
     onTimeframeChange: (String) -> Unit
 ) {
@@ -287,17 +293,55 @@ fun TickerDetail(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                CandlestickChart(
-                    candles = candles,
+                RealtimeTradingChart(
+                    candlesJson = candlesJson,
+                    latestCandleJson = latestCandleJson,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(280.dp)
+                        .height(350.dp)
                 )
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
     }
+}
+
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+fun RealtimeTradingChart(
+    candlesJson: String?,
+    latestCandleJson: String?,
+    modifier: Modifier = Modifier
+) {
+    AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            WebView(context).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.loadWithOverviewMode = true
+                settings.useWideViewPort = true
+                webViewClient = WebViewClient()
+                
+                // Set background to dark slate matching the app theme
+                setBackgroundColor(android.graphics.Color.parseColor("#161B22"))
+
+                // Load the HTML file from assets
+                loadUrl("file:///android_asset/chart.html")
+            }
+        },
+        update = { webView ->
+            if (candlesJson != null) {
+                // Evaluate javascript to set initial candles
+                webView.evaluateJavascript("javascript:setCandles('$candlesJson');", null)
+            }
+            if (latestCandleJson != null) {
+                // Evaluate javascript to update real-time candle
+                webView.evaluateJavascript("javascript:updateCandle('$latestCandleJson');", null)
+            }
+        }
+    )
 }
 
 @Composable

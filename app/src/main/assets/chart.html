@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: transparent;
+        }
+        #chart-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+        }
+    </style>
+    <!-- Use unpkg CDN for Lightweight Charts -->
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+</head>
+<body>
+    <div id="chart-container"></div>
+
+    <script>
+        let chart = null;
+        let candleSeries = null;
+
+        // Default to dark theme properties, will be updated via Kotlin
+        const darkTheme = {
+            layout: {
+                background: { type: 'solid', color: '#161B22' },
+                textColor: '#8B949E',
+            },
+            grid: {
+                vertLines: { color: '#21262D' },
+                horzLines: { color: '#21262D' },
+            },
+            timeScale: {
+                borderColor: '#21262D',
+                timeVisible: true,
+                secondsVisible: false,
+            },
+            rightPriceScale: {
+                borderColor: '#21262D',
+            }
+        };
+
+        const lightTheme = {
+            layout: {
+                background: { type: 'solid', color: '#FFFFFF' },
+                textColor: '#191919',
+            },
+            grid: {
+                vertLines: { color: '#e1e3e6' },
+                horzLines: { color: '#e1e3e6' },
+            },
+            timeScale: {
+                borderColor: '#e1e3e6',
+                timeVisible: true,
+                secondsVisible: false,
+            },
+            rightPriceScale: {
+                borderColor: '#e1e3e6',
+            }
+        };
+
+        function initChart() {
+            if (chart) return;
+            
+            const container = document.getElementById('chart-container');
+            chart = LightweightCharts.createChart(container, {
+                width: container.clientWidth,
+                height: container.clientHeight,
+                crosshair: {
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                },
+                ...darkTheme // Default
+            });
+
+            candleSeries = chart.addCandlestickSeries({
+                upColor: '#26a69a',
+                downColor: '#ef5350',
+                borderVisible: false,
+                wickUpColor: '#26a69a',
+                wickDownColor: '#ef5350',
+            });
+
+            window.addEventListener('resize', () => {
+                chart.resize(container.clientWidth, container.clientHeight);
+            });
+        }
+
+        // Functions to be called from Kotlin
+
+        function setCandles(jsonData) {
+            if (!chart) initChart();
+            try {
+                const data = JSON.parse(jsonData);
+                candleSeries.setData(data);
+                chart.timeScale().fitContent();
+            } catch (e) {
+                console.error("Error setting candles:", e);
+            }
+        }
+
+        function updateCandle(jsonData) {
+            if (!chart || !candleSeries) return;
+            try {
+                const candle = JSON.parse(jsonData);
+                candleSeries.update(candle);
+            } catch (e) {
+                console.error("Error updating candle:", e);
+            }
+        }
+
+        function clearChart() {
+            if (candleSeries) {
+                candleSeries.setData([]);
+            }
+        }
+
+        function setDarkTheme() {
+            if (!chart) initChart();
+            chart.applyOptions(darkTheme);
+            document.body.style.backgroundColor = '#161B22';
+        }
+
+        function setLightTheme() {
+            if (!chart) initChart();
+            chart.applyOptions(lightTheme);
+            document.body.style.backgroundColor = '#FFFFFF';
+        }
+
+        // Initialize on load
+        window.onload = initChart;
+    </script>
+</body>
+</html>

@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.santoso.tech.data.model.CandleData
 import com.santoso.tech.data.model.Ticker
-import com.santoso.tech.data.repository.CandleRepository
+import com.santoso.tech.data.repository.ChartRepository
 import com.santoso.tech.data.repository.FavoriteRepository
 import com.santoso.tech.data.repository.MarketRepository
 import com.santoso.tech.data.repository.SettingsRepository
@@ -14,6 +14,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 
 sealed class DetailUiState {
@@ -21,8 +23,9 @@ sealed class DetailUiState {
     data class Success(
         val ticker: Ticker,
         val isFavorite: Boolean,
-        val candles: List<CandleData> = emptyList(),
-        val selectedTimeframe: String = "1D"
+        val selectedTimeframe: String = "1D",
+        val candlesJson: String? = null,
+        val latestCandleJson: String? = null
     ) : DetailUiState()
     data class Error(val message: String) : DetailUiState()
 }
@@ -30,7 +33,7 @@ sealed class DetailUiState {
 @HiltViewModel
 class DetailViewModel @Inject constructor(
     private val repository: MarketRepository,
-    private val candleRepository: CandleRepository,
+    private val chartRepository: ChartRepository,
     private val favoriteRepository: FavoriteRepository,
     private val webSocketManager: WebSocketManager,
     private val settingsRepository: SettingsRepository,
@@ -47,8 +50,9 @@ class DetailViewModel @Inject constructor(
 
     private var currentTicker: Ticker? = null
     private var isFavorite: Boolean = false
-    private var currentCandles: MutableList<CandleData> = mutableListOf()
     private var currentTimeframe: String = "1D"
+    private var currentCandlesJson: String? = null
+    private var currentLatestCandleJson: String? = null
     private var candleWsJob: Job? = null
 
     init {
@@ -57,7 +61,7 @@ class DetailViewModel @Inject constructor(
         updateUiState()
 
         fetchTicker()
-        fetchCandles("1D")
+        fetchChartData("1D")
         observeFavoriteStatus()
         observeTickerWebSocket()
     }
@@ -88,24 +92,10 @@ class DetailViewModel @Inject constructor(
     private fun subscribeCandleWs(bar: String) {
         candleWsJob?.cancel()
         candleWsJob = viewModelScope.launch {
-            webSocketManager.subscribeCandle(instId, bar)
-            webSocketManager.candleFlow
-                .filter { it.first == instId }
-                .collect { (_, incoming) ->
-                    // The WS sends the LATEST candle for current bar.
-                    // Update the last entry if same timestamp, else append.
-                    if (currentCandles.isNotEmpty()) {
-                        val last = currentCandles.last()
-                        if (last.timestamp == incoming.timestamp) {
-                            currentCandles[currentCandles.lastIndex] = incoming
-                        } else {
-                            currentCandles.add(incoming)
-                            // Keep list manageable
-                            if (currentCandles.size > 120) currentCandles.removeAt(0)
-                        }
-                    } else {
-                        currentCandles.add(incoming)
-                    }
+            chartRepository.observeRealtimeCandles(instId, bar)
+                .catch { /* ignore */ }
+                .collect { incoming ->
+                    currentLatestCandleJson = Json.encodeToString(incoming)
                     updateUiState()
                 }
         }
@@ -116,36 +106,40 @@ class DetailViewModel @Inject constructor(
             _uiState.value = DetailUiState.Success(
                 ticker = it,
                 isFavorite = isFavorite,
-                candles = currentCandles.toList(),
-                selectedTimeframe = currentTimeframe
+                selectedTimeframe = currentTimeframe,
+                candlesJson = currentCandlesJson,
+                latestCandleJson = currentLatestCandleJson
             )
         }
     }
 
-    fun fetchCandles(bar: String) {
+    fun fetchChartData(bar: String) {
         // Unsubscribe old candle WS
         if (currentTimeframe != bar) {
-            webSocketManager.unsubscribeCandle(instId, currentTimeframe)
+            chartRepository.unsubscribeRealtimeCandles(instId, currentTimeframe)
         }
         currentTimeframe = bar
-        currentCandles.clear()
+        currentCandlesJson = null
+        currentLatestCandleJson = null
 
         viewModelScope.launch {
-            candleRepository.fetchCandles(instId, bar)
-                .catch { /* ignore */ }
-                .collect { candles ->
-                    currentCandles = candles.toMutableList()
-                    updateUiState()
-                    // After REST load, subscribe WS for live updates
-                    subscribeCandleWs(bar)
-                }
+            try {
+                val candles = chartRepository.getInitialCandles(instId, bar)
+                currentCandlesJson = Json.encodeToString(candles)
+                updateUiState()
+                
+                // After REST load, subscribe WS for live updates
+                subscribeCandleWs(bar)
+            } catch (e: Exception) {
+                // handle error
+            }
         }
     }
 
     fun refreshData() {
         _uiState.value = DetailUiState.Loading
         fetchTicker()
-        fetchCandles(currentTimeframe)
+        fetchChartData(currentTimeframe)
     }
 
     fun toggleFavorite() {
@@ -169,7 +163,8 @@ class DetailViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         webSocketManager.unsubscribeTickers(listOf(instId))
-        webSocketManager.unsubscribeCandle(instId, currentTimeframe)
+        chartRepository.unsubscribeRealtimeCandles(instId, currentTimeframe)
+        chartRepository.closeConnection()
         candleWsJob?.cancel()
     }
 }
