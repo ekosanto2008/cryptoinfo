@@ -21,6 +21,7 @@
 | Feature | Description |
 |---------|-------------|
 | 📊 **Real-Time Prices** | Live WebSocket-powered ticker updates every second |
+| 🚀 **Splash Screen** | Modern animated splash screen with gradient background |
 | 📰 **Crypto News** | Multi-source news aggregation (CoinDesk, NewsAPI, GNews, etc.) |
 | 📖 **In-App Reader** | Modern WebView reader with progress bar, share, and back nav |
 | 🔥 **Top List** | Top 60 coins ranked by market capitalization |
@@ -61,6 +62,14 @@
 <td><img src="docs/screenshots/favorites.png" width="200"/></td>
 <td><img src="docs/screenshots/news_tab.jpg" width="200"/></td>
 <td><img src="docs/screenshots/article_reader.jpg" width="200"/></td>
+</tr>
+<tr>
+<td align="center"><b>Splash Screen</b></td>
+<td colspan="2"></td>
+</tr>
+<tr>
+<td><img src="docs/screenshots/splash_screen.png" width="200"/></td>
+<td colspan="2"></td>
 </tr>
 </table>
 </div>

@@ -31,6 +31,7 @@ import com.santoso.tech.ui.favorite.FavoriteViewModel
 import com.santoso.tech.ui.market.MarketScreen
 import com.santoso.tech.ui.market.MarketViewModel
 import com.santoso.tech.ui.news.ArticleReaderScreen
+import com.santoso.tech.ui.splash.SplashScreen
 import com.santoso.tech.ui.theme.CyrptoInfoTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -79,7 +80,7 @@ fun AppNavigation() {
     val accent = MaterialTheme.colorScheme.primary
 
     // Track current route to know when to show bottom nav
-    var currentRoute by remember { mutableStateOf("market") }
+    var currentRoute by remember { mutableStateOf("splash") }
     navController.addOnDestinationChangedListener { _, destination, _ ->
         currentRoute = destination.route ?: "market"
     }
@@ -142,9 +143,19 @@ fun AppNavigation() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "market",
+            startDestination = "splash",
             modifier = Modifier.padding(innerPadding)
         ) {
+            composable("splash") {
+                SplashScreen(
+                    onSplashFinished = {
+                        navController.navigate("market") {
+                            popUpTo("splash") { inclusive = true }
+                        }
+                    }
+                )
+            }
+
             composable("market") {
                 val viewModel: MarketViewModel = hiltViewModel()
                 MarketScreen(
